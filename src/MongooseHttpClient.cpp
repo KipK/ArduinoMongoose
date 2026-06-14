@@ -131,20 +131,11 @@ MongooseHttpClientRequest *MongooseHttpClient::beginRequest(const char *uri)
   return new MongooseHttpClientRequest(this, uri);
 }
 
-bool MongooseHttpClient::send(MongooseHttpClientRequest *request)
+void MongooseHttpClient::send(MongooseHttpClientRequest *request)
 {
-  if(NULL == request) {
-    return false;
-  }
-
   // The wrapper does not pool or reuse HTTP connections.
   if(!request->addHeader("Connection", "close")) {
     DBUGLN("Failed to add Connection: close header");
-    if(request->_onClose) {
-      request->_onClose();
-    }
-    delete request;
-    return false;
   }
 
   struct mg_connect_opts opts;
@@ -156,14 +147,8 @@ bool MongooseHttpClient::send(MongooseHttpClientRequest *request)
   mg_connection *nc = mg_connect_http_opt(Mongoose.getMgr(), eventHandler, request, opts, request->_uri, request->_extraHeaders, (const char *)request->_body);
   if(nc) {
     request->_nc = nc;
-    return true;
   } else {
     DBUGF("Failed to connect to %s: %s", request->_uri, err);
-    if(request->_onClose) {
-      request->_onClose();
-    }
-    delete request;
-    return false;
   }
 }
 
